@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PeduliPalestina - Salurkan Bantuan Kemanusiaan</title>
+  <meta name="description" content="Salurkan donasi kemanusiaan untuk Palestina: bantuan medis, pangan, dan air bersih secara amanah dan transparan.">
+  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+
+  <!-- Memuat CDN Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Konfigurasi Palet Warna Kustom Tema PeduliPalestina -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            hijau: '#14532d',
+            'hijau-tua': '#0d3b20',
+            'hijau-muda': '#e8f1ea',
+            merah: '#b71c1c',
+            'merah-tua': '#8f1414',
+            teks: '#1f2933',
+            'teks-lembut': '#4a5761',
+            garis: '#d5ddd8',
+            latar: '#f6f8f6',
+            fokus: '#f2b705'
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- File JavaScript Eksternal untuk Interaktivitas Halaman -->
+  <script src="script.js" defer></script>
+</head>
+<body class="m-0 break-words bg-latar font-sans leading-relaxed text-teks">
+
+  <!-- Navigasi Aksesibilitas (Skip Link untuk Pembaca Layar/Keyboard) -->
+  <a class="absolute left-4 top-[-4rem] z-[100] rounded-lg bg-white px-4 py-2 font-bold text-hijau focus:top-3" href="#main">
+    Lewati ke konten utama
+  </a>
+
+  <!-- ==================== HEADER & NAVIGASI ==================== -->
+  <header class="sticky top-0 z-10 flex flex-row flex-wrap items-center justify-between gap-2 border-b border-garis bg-white px-5 py-2 md:min-h-16 md:flex-nowrap">
+    <!-- Logo Identitas Website -->
+    <div>
+      <a class="inline-flex items-center gap-2 text-2xl font-extrabold text-hijau no-underline" href="#hero">
+        <img class="rounded-lg" src="images/favicon.svg" alt="" width="32" height="32">
+        Peduli<span class="text-merah">Palestina</span>
+      </a>
+    </div>
+
+    <!-- Tombol Hamburger (Hanya Tampil di Layar HP/Mobile) -->
+    <button class="flex h-11 w-11 flex-col items-center justify-center gap-[5px] rounded-lg bg-hijau-muda p-0 hover:bg-garis md:hidden" type="button" aria-expanded="false" aria-controls="menu" aria-label="Buka menu">
+      <span class="block h-[3px] w-[22px] rounded-sm bg-hijau"></span>
+      <span class="block h-[3px] w-[22px] rounded-sm bg-hijau"></span>
+      <span class="block h-[3px] w-[22px] rounded-sm bg-hijau"></span>
+    </button>
+
+    <!-- Menu Tautan Navigasi (Responsif: Dropdown di Mobile, Sejajar di Desktop) -->
+    <nav id="menu" class="hidden w-full md:block md:w-auto" aria-label="Navigasi utama">
+      <ul class="flex flex-col items-stretch gap-1 md:flex-row md:flex-wrap md:items-center md:justify-center md:gap-x-2">
+        <li><a class="block rounded-lg px-3 py-2 font-semibold text-teks no-underline hover:bg-hijau-muda hover:text-hijau md:rounded-full md:py-[0.45rem]" href="#hero">Beranda</a></li>
+        <li><a class="block rounded-lg px-3 py-2 font-semibold text-teks no-underline hover:bg-hijau-muda hover:text-hijau md:rounded-full md:py-[0.45rem]" href="#program-prioritas">Program Prioritas</a></li>
+        <li><a class="block rounded-lg px-3 py-2 font-semibold text-teks no-underline hover:bg-hijau-muda hover:text-hijau md:rounded-full md:py-[0.45rem]" href="#statistik">Statistik</a></li>
+        <li><a class="block rounded-lg px-3 py-2 font-semibold text-teks no-underline hover:bg-hijau-muda hover:text-hijau md:rounded-full md:py-[0.45rem]" href="#agenda">Agenda Penyaluran</a></li>
+        <!-- Tombol CTA Navigasi -->
+        <li><a class="block rounded-lg bg-merah px-3 py-2 font-semibold text-white no-underline hover:bg-merah-tua md:rounded-full md:py-[0.45rem]" href="#donasi">Donasi Sekarang</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- ==================== KONTEN UTAMA (MAIN) ==================== -->
+  <main id="main">
+
+    <!-- 1. SECTION HERO: Pesan Utama & Panggilan Aksi (Call to Action) -->
+    <section id="hero" class="grid items-center gap-8 bg-hijau px-5 py-16 text-center text-white md:grid-cols-[1.1fr_1fr] md:px-[max(1.25rem,calc((100%-1100px)/2))] md:py-24 md:text-left">
+      <div>
+        <h1 class="mx-auto mb-4 max-w-[18ch] text-[clamp(1.9rem,6vw,3rem)] font-bold leading-tight md:mx-0">
+          Ulurkan Tangan untuk Kemanusiaan di Palestina
+        </h1>
+        <p class="mx-auto mb-7 max-w-[55ch] text-[1.1rem] text-[#dcebe0] md:mx-0">
+          Bantu saudara-saudara kita yang membutuhkan obat-obatan, paket pangan, dan air bersih secara amanah dan transparan.
+        </p>
+        <a href="#donasi" class="inline-block rounded-[10px] bg-fokus px-7 py-3.5 font-bold text-teks no-underline hover:bg-[#d9a204]">
+          Donasi Sekarang &rarr;
+        </a>
+      </div>
+      <!-- Ilustrasi Banner Hero -->
+      <img class="mx-auto w-full max-w-[480px] rounded-[20px] shadow-[0_12px_30px_rgba(0,0,0,.25)]" src="images/hero.svg" alt="Ilustrasi bantuan kemanusiaan: hati, air bersih, dan paket medis" width="480" height="360">
+    </section>
+
+    <!-- 2. SECTION PROGRAM PRIORITAS: Tiga Pilar Bantuan (Kartu Berjejer) -->
+    <section id="program-prioritas" class="mx-auto grid max-w-[1100px] grid-cols-1 gap-5 px-5 py-[3.25rem] md:grid-cols-2 md:py-[4.5rem] lg:grid-cols-3">
+      <h2 class="col-span-full mb-2 text-[1.65rem] font-bold leading-tight text-hijau">Program Prioritas Bantuan</h2>
+      
+      <!-- Kartu 1: Bantuan Medis -->
+      <article class="overflow-hidden rounded-[10px] border border-garis bg-white transition hover:-translate-y-1 hover:shadow-[0_10px_24px_rgba(20,83,45,.15)]">
+        <img class="aspect-video w-full object-cover" src="images/medis.svg" alt="Bantuan medis" width="320" height="180" loading="lazy">
+        <h3 class="px-5 pt-4 text-[1.1rem] font-bold leading-tight text-hijau">1. Bantuan Medis &amp; Ambulans Darurat</h3>
+        <p class="px-5 pb-5 text-teks-lembut">Penyediaan obat-obatan esensial, kasa steril, dan operasional tim medis darurat di lapangan.</p>
+      </article>
+
+      <!-- Kartu 2: Paket Pangan -->
+      <article class="overflow-hidden rounded-[10px] border border-garis bg-white transition hover:-translate-y-1 hover:shadow-[0_10px_24px_rgba(20,83,45,.15)]">
+        <img class="aspect-video w-full object-cover" src="images/pangan.svg" alt="Dapur umum dan paket pangan" width="320" height="180" loading="lazy">
+        <h3 class="px-5 pt-4 text-[1.1rem] font-bold leading-tight text-hijau">2. Dapur Umum &amp; Paket Pangan</h3>
+        <p class="px-5 pb-5 text-teks-lembut">Distribusi ribuan porsi makanan hangat dan bahan pokok gandum untuk keluarga di pengungsian.</p>
+      </article>
+
+      <!-- Kartu 3: Air Bersih & Sanitasi -->
+      <article class="overflow-hidden rounded-[10px] border border-garis bg-white transition hover:-translate-y-1 hover:shadow-[0_10px_24px_rgba(20,83,45,.15)]">
+        <img class="aspect-video w-full object-cover" src="images/air.svg" alt="Air bersih" width="320" height="180" loading="lazy">
+        <h3 class="px-5 pt-4 text-[1.1rem] font-bold leading-tight text-hijau">3. Truk Air Bersih &amp; Sanitasi</h3>
+        <p class="px-5 pb-5 text-teks-lembut">Pasokan air layak minum dan penyediaan fasilitas sanitasi darurat untuk mencegah penyakit.</p>
+      </article>
+    </section>
+
+    <!-- 3. SECTION STATISTIK: Laporan Angka Capaian Donasi -->
+    <section id="statistik" class="mx-auto grid max-w-[1100px] grid-cols-1 gap-5 bg-hijau-muda px-5 py-[3.25rem] md:grid-cols-2 md:py-[4.5rem] lg:grid-cols-3">
+      <h2 class="col-span-full mb-2 text-[1.65rem] font-bold leading-tight text-hijau">Statistik Capaian Donasi</h2>
+      
+      <!-- Angka 1: Total Dana -->
+      <div class="rounded-[10px] border-t-4 border-merah bg-white px-4 py-6 text-center">
+        <p class="mb-1 text-[clamp(1.4rem,4vw,1.9rem)] font-extrabold leading-tight text-merah">Rp 850.000.000</p>
+        <p class="m-0 text-teks-lembut">Total Dana Terhimpun</p>
+      </div>
+
+      <!-- Angka 2: Total Donatur -->
+      <div class="rounded-[10px] border-t-4 border-merah bg-white px-4 py-6 text-center">
+        <p class="mb-1 text-[clamp(1.4rem,4vw,1.9rem)] font-extrabold leading-tight text-merah">4.520 Orang</p>
+        <p class="m-0 text-teks-lembut">Jumlah Donatur Tergabung</p>
+      </div>
+
+      <!-- Angka 3: Penerima Manfaat -->
+      <div class="rounded-[10px] border-t-4 border-merah bg-white px-4 py-6 text-center">
+        <p class="mb-1 text-[clamp(1.4rem,4vw,1.9rem)] font-extrabold leading-tight text-merah">12.500 Warga</p>
+        <p class="m-0 text-teks-lembut">Penerima Manfaat Bantuan</p>
+      </div>
+    </section>
+
+    <!-- 4. SECTION AGENDA: Laporan Realisasi Penyaluran di Lapangan -->
+    <section id="agenda" class="mx-auto max-w-[1100px] px-5 py-[3.25rem] md:py-[4.5rem]">
+      <h2 class="mb-6 text-[1.65rem] font-bold leading-tight text-hijau">Agenda &amp; Laporan Penyaluran</h2>
+
+      <!-- Berita Penyaluran 1 -->
+      <article class="mb-4 grid overflow-hidden rounded-[10px] border border-garis bg-white md:grid-cols-[260px_1fr] md:items-center md:gap-6">
+        <img class="aspect-video w-full object-cover md:h-full md:min-h-[150px] md:aspect-auto" src="images/air.svg" alt="Distribusi air bersih" width="320" height="180" loading="lazy">
+        <div class="px-5 pb-5 md:py-5 md:pl-0">
+          <time class="mb-2 inline-block rounded-full bg-hijau-muda px-3 py-1 text-[0.85rem] font-bold text-hijau" datetime="2026-09-25">25 September 2026</time>
+          <h3 class="mb-2 text-[1.1rem] font-bold leading-tight">Distribusi 500 Tangki Air Bersih</h3>
+          <p class="m-0 text-teks-lembut">Penyaluran air bersih untuk kamp-kamp pengungsian wilayah Khan Younis dan Deir al-Balah.</p>
+        </div>
+      </article>
+
+      <!-- Berita Penyaluran 2 -->
+      <article class="mb-4 grid overflow-hidden rounded-[10px] border border-garis bg-white md:grid-cols-[260px_1fr] md:items-center md:gap-6">
+        <img class="aspect-video w-full object-cover md:h-full md:min-h-[150px] md:aspect-auto" src="images/medis.svg" alt="Pengiriman paket medis" width="320" height="180" loading="lazy">
+        <div class="px-5 pb-5 md:py-5 md:pl-0">
+          <time class="mb-2 inline-block rounded-full bg-hijau-muda px-3 py-1 text-[0.85rem] font-bold text-hijau" datetime="2026-09-20">20 September 2026</time>
+          <h3 class="mb-2 text-[1.1rem] font-bold leading-tight">Pengiriman Paket Medis ke RS Lapangan</h3>
+          <p class="m-0 text-teks-lembut">Peralatan bedah darurat dan infus telah diterima oleh dokter sukarelawan setempat.</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- 5. SECTION FORMULIR: Form Input Donasi Kemanusiaan -->
+    <section id="donasi" class="bg-white px-5 py-[3.25rem] md:py-[4.5rem]">
+      <h2 class="mx-auto mb-6 max-w-[1100px] text-[1.65rem] font-bold leading-tight text-hijau">Formulir Donasi Kemanusiaan</h2>
+      <form class="mx-auto max-w-[640px] rounded-[10px] border border-garis bg-latar p-6 md:p-9" action="#" method="post" enctype="multipart/form-data">
+        
+        <!-- Input Nama Donatur -->
+        <div class="mb-5">
+          <label class="mb-1 block font-semibold" for="nama">Nama Donatur:</label>
+          <input class="w-full rounded-lg border border-[#8a9a91] bg-white px-3 py-2.5 text-inherit focus:border-hijau focus:outline-none focus:ring-2 focus:ring-fokus" type="text" id="nama" name="nama" placeholder="Isi 'Hamba Allah' jika anonim">
+        </div>
+
+        <!-- Opsi Pilihan Program -->
+        <div class="mb-5">
+          <label class="mb-1 block font-semibold" for="program">Pilih Program Bantuan:</label>
+          <select class="w-full rounded-lg border border-[#8a9a91] bg-white px-3 py-2.5 text-inherit focus:border-hijau focus:outline-none focus:ring-2 focus:ring-fokus" id="program" name="program">
+            <option value="medis">Bantuan Medis Darurat</option>
+            <option value="pangan">Paket Pangan &amp; Dapur Umum</option>
+            <option value="air">Air Bersih &amp; Sanitasi</option>
+          </select>
+        </div>
+
+        <!-- Input Nominal Donasi -->
+        <div class="mb-5">
+          <label class="mb-1 block font-semibold" for="nominal">Nominal Donasi (Rp):</label>
+          <input class="w-full rounded-lg border border-[#8a9a91] bg-white px-3 py-2.5 text-inherit focus:border-hijau focus:outline-none focus:ring-2 focus:ring-fokus" type="number" id="nominal" name="nominal" min="1000" step="1000" placeholder="Contoh: 100000" required>
+        </div>
+
+        <!-- Input Pesan & Doa -->
+        <div class="mb-5">
+          <label class="mb-1 block font-semibold" for="doa">Doa &amp; Pesan Kebaikan:</label>
+          <textarea class="w-full resize-y rounded-lg border border-[#8a9a91] bg-white px-3 py-2.5 text-inherit focus:border-hijau focus:outline-none focus:ring-2 focus:ring-fokus" id="doa" name="doa" rows="3" placeholder="Tuliskan doa untuk warga Palestina..."></textarea>
+        </div>
+
+        <!-- Unggah Berkas Bukti Transfer -->
+        <div class="mb-5">
+          <label class="mb-1 block font-semibold" for="bukti">Unggah Bukti Transfer:</label>
+          <input class="w-full rounded-lg border border-[#8a9a91] bg-white px-2 py-2 text-inherit focus:border-hijau focus:outline-none focus:ring-2 focus:ring-fokus" type="file" id="bukti" name="bukti" accept="image/*">
+        </div>
+
+        <!-- Tombol Aksi Submit Donasi -->
+        <button class="mt-2 w-full rounded-[10px] bg-merah px-7 py-3.5 font-bold text-white hover:bg-merah-tua" type="submit">Kirim Donasi</button>
+      </form>
+    </section>
+  </main>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="bg-hijau-tua px-5 py-6 text-center text-[0.9rem] text-[#dcebe0]">
+    <p class="m-0">&copy; 2026 PeduliPalestina - Lembaga Penggalangan Dana Kemanusiaan Terpercaya</p>
+  </footer>
+
+</body>
+</html>
