@@ -2,7 +2,6 @@
 
 Website penggalangan donasi kemanusiaan online yang aman, cepat, dan transparan, dengan laporan berkala serta pelacakan penyaluran bantuan secara terbuka.
 
-> Tugas Web Programming, Pertemuan 2, Task 03: *Refine the Interface* (HTML + CSS).
 
 ## Latar Belakang Masalah
 
@@ -77,15 +76,3 @@ Gambar sudah tertanam langsung di `index.html` (SVG), jadi tidak perlu folder ta
 - Indikator fokus yang jelas untuk navigasi keyboard
 - Menghormati preferensi `prefers-reduced-motion`
 
-## Pengembangan Selanjutnya
-
-- Progress bar dana terkumpul terhadap target
-- Backend untuk menyimpan donasi dan verifikasi bukti transfer
-- Dashboard admin untuk verifikasi donasi dan update kabar
-- Halaman katalog lengkap (termasuk Tenda Pengungsian)
-
-## Pembuat
-
-- Nama: *(isi nama dan NIM)*
-- Mata kuliah: Web Programming
-- Universitas Muhammadiyah Malang
