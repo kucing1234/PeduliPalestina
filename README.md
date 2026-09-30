@@ -25,16 +25,6 @@ Website **"PeduliPalestina"** yang menyediakan:
 4. Laporan update penyaluran bantuan (foto dokumentasi dan catatan kegiatan di lapangan).
 5. Dashboard admin untuk verifikasi donasi dan update kabar terbaru.
 
-## Status Implementasi
-
-| Fitur | Status |
-|---|---|
-| Katalog program prioritas | Sudah (3 program: medis, pangan, air bersih) |
-| Form donasi + upload bukti transfer | Sudah (tampilan form; belum terhubung ke server) |
-| Statistik dana dan donatur | Sudah (angka statis; progress bar belum ada) |
-| Agenda dan laporan penyaluran | Sudah (2 laporan contoh, dengan gambar) |
-| Dashboard admin | Belum (butuh backend) |
-
 ## Checklist Task 03
 
 - [x] Semantic HTML (`header`, `nav`, `main`, `section`, `article`, `time`, `footer`)
@@ -44,7 +34,7 @@ Website **"PeduliPalestina"** yang menyediakan:
 - [x] Responsive (mobile, tablet, desktop; menu hamburger di layar kecil)
 - [x] Tidak ada horizontal overflow
 
-## Teknologi
+## Bahasa
 
 - HTML5
 - CSS3 (CSS variables, Flexbox, Grid, media query)
@@ -60,13 +50,6 @@ Website **"PeduliPalestina"** yang menyediakan:
 └── README.md
 ```
 
-Gambar sudah tertanam langsung di `index.html` (SVG), jadi tidak perlu folder tambahan.
-
-## Cara Menjalankan
-
-1. Simpan semua file di satu folder.
-2. Buka `index.html` di browser (klik dua kali), atau
-3. Gunakan ekstensi **Live Server** di VS Code: klik kanan `index.html` → **Open with Live Server**.
 
 ## Aksesibilitas
 
