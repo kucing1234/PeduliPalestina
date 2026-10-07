@@ -330,3 +330,24 @@ input:focus, select:focus, textarea:focus { border-color: var(--hijau); }
   #agenda article > div { padding: 1.25rem 1.5rem 1.25rem 0; }
   #agenda article img { height: 100%; aspect-ratio: auto; min-height: 150px; }
 }
+
+/* ===== Task 3: Panel Detail Program ===== */
+.btn-detail { margin: 0 1.25rem 1.25rem; padding: 0.6rem 1.2rem; }
+
+.detail {
+  grid-column: 1 / -1;
+  position: relative;
+  background: var(--putih);
+  border: 2px solid var(--hijau);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+.detail[hidden] { display: none; }
+.detail h3 { color: var(--hijau); padding-right: 2.5rem; }
+.detail progress { width: 100%; height: 14px; accent-color: var(--hijau); }
+.detail-tutup {
+  position: absolute; top: 0.75rem; right: 0.75rem;
+  width: 36px; height: 36px; padding: 0;
+  background: var(--hijau-muda); color: var(--hijau);
+  font-size: 1.4rem; line-height: 1;
+}
