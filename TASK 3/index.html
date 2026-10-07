@@ -46,17 +46,29 @@
         <img src="images/medis.svg" alt="Bantuan medis" width="320" height="180" loading="lazy">
         <h3>1. Bantuan Medis &amp; Ambulans Darurat</h3>
         <p>Penyediaan obat-obatan esensial, kasa steril, dan operasional tim medis darurat di lapangan.</p>
+        <button type="button" class="btn-detail" data-program="medis">Lihat Detail</button>
       </article>
       <article>
         <img src="images/pangan.svg" alt="Dapur umum dan paket pangan" width="320" height="180" loading="lazy">
         <h3>2. Dapur Umum &amp; Paket Pangan</h3>
         <p>Distribusi ribuan porsi makanan hangat dan bahan pokok gandum untuk keluarga di pengungsian.</p>
+        <button type="button" class="btn-detail" data-program="pangan">Lihat Detail</button>
       </article>
       <article>
         <img src="images/air.svg" alt="Air bersih" width="320" height="180" loading="lazy">
         <h3>3. Truk Air Bersih &amp; Sanitasi</h3>
         <p>Pasokan air layak minum dan penyediaan fasilitas sanitasi darurat untuk mencegah penyakit.</p>
+        <button type="button" class="btn-detail" data-program="air">Lihat Detail</button>
       </article>
+
+      <div id="detail-program" class="detail" hidden>
+        <button type="button" class="detail-tutup" aria-label="Tutup detail">&times;</button>
+        <h3 id="detail-judul"></h3>
+        <p id="detail-deskripsi"></p>
+        <progress id="detail-progress" max="100" value="0"></progress>
+        <p id="detail-dana"></p>
+        <button type="button" id="detail-donasi">Donasi untuk program ini</button>
+      </div>
     </section>
 
     <section id="statistik">
@@ -73,6 +85,15 @@
         <p class="stat-angka">12.500 Warga</p>
         <p class="stat-label">Penerima Manfaat Bantuan</p>
       </div>
+    </section>
+
+    <section id="api-programs" aria-live="polite">
+      <h2>Data API Program Kemanusiaan</h2>
+      <div class="api-status api-loading" id="api-status">Mengambil data program...</div>
+      <div class="api-actions">
+        <button type="button" class="btn btn-api" id="refresh-api">Refresh Data</button>
+      </div>
+      <div class="api-list" id="api-program-list"></div>
     </section>
 
     <section id="agenda">
