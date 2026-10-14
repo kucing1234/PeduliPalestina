@@ -482,3 +482,55 @@ input:focus, select:focus, textarea:focus { border-color: var(--hijau); }
   background: var(--hijau-muda); color: var(--hijau);
   font-size: 1.4rem; line-height: 1;
 }
+/* ==========================================================
+   WEEK 4 & 5 - State API + konten dinamis PHP
+   ========================================================== */
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.api-status button {
+  margin-left: 0.75rem;
+  padding: 0.4rem 1rem;
+  background: var(--hijau);
+}
+.api-status button:hover { background: var(--hijau-tua); }
+
+/* Informasi lembaga (Week 5 Task 01) */
+#info-lembaga { background: var(--hijau-muda); }
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+.info-item {
+  background: var(--putih);
+  border-radius: var(--radius);
+  border-top: 4px solid var(--hijau);
+  padding: 1.25rem;
+}
+.info-item dt {
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--teks-lembut);
+}
+.info-item dd { margin: 0; font-weight: 700; font-size: 1.1rem; color: var(--hijau); }
+.info-item dd small { display: block; margin-top: 0.4rem; font-weight: 400; font-size: 0.85rem; color: var(--teks-lembut); }
+.info-item ul { margin: 0.5rem 0 0; padding-left: 1.1rem; font-weight: 400; font-size: 0.95rem; color: var(--teks); }
+
+/* Badge status program (Week 5 Task 02 - conditional) */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.badge-tercapai { background: var(--hijau); color: var(--putih); }
+.badge-hampir   { background: #edf4ff; color: #1d4ed8; }
+.badge-berjalan { background: #ebfdf1; color: #166534; }
+.badge-mendesak { background: #fff1f2; color: #b91c1c; }
+.kartu-status { padding: 1rem 1.25rem 0; }
+.kartu-status + h3 { padding-top: 0.6rem; }

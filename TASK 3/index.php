@@ -1,9 +1,10 @@
+<?php require __DIR__ . '/data.php'; ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PeduliPalestina - Salurkan Bantuan Kemanusiaan</title>
+  <title><?= e($lembaga['nama']) ?> - Salurkan Bantuan Kemanusiaan</title>
   <meta name="description" content="Salurkan donasi kemanusiaan untuk Palestina: bantuan medis, pangan, dan air bersih secara amanah dan transparan.">
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
@@ -40,26 +41,55 @@
       <img class="hero-gambar" src="images/hero.svg" alt="Ilustrasi bantuan kemanusiaan: hati, air bersih, dan paket medis" width="480" height="360">
     </section>
 
+    <!-- Week 5 Task 01: informasi dari variable PHP -->
+    <section id="info-lembaga">
+      <h2>Informasi Lembaga</h2>
+      <dl class="info-grid">
+        <div class="info-item">
+          <dt>Nama Lembaga</dt>
+          <dd><?= e($lembaga['nama']) ?></dd>
+        </div>
+        <div class="info-item">
+          <dt>Periode Kampanye</dt>
+          <dd><?= e($lembaga['periode']) ?></dd>
+        </div>
+        <div class="info-item">
+          <dt>Program Prioritas</dt>
+          <dd>
+            <?= count($programs) ?> program
+            <ul>
+              <?php foreach ($programs as $p): ?>
+                <li><?= e($p['title']) ?></li>
+              <?php endforeach; ?>
+            </ul>
+          </dd>
+        </div>
+        <div class="info-item">
+          <dt>Status Program</dt>
+          <dd>
+            <span class="badge badge-<?= e($status_kelas) ?>"><?= e($status_label) ?></span>
+            <small><?= $persen_total ?>% dari target dana</small>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- Week 5 Task 02 & 03: kartu dibuat PHP dari array (loop + conditional) -->
     <section id="program-prioritas">
       <h2>Program Prioritas Bantuan</h2>
-      <article>
-        <img src="images/medis.svg" alt="Bantuan medis" width="320" height="180" loading="lazy">
-        <h3>1. Bantuan Medis &amp; Ambulans Darurat</h3>
-        <p>Penyediaan obat-obatan esensial, kasa steril, dan operasional tim medis darurat di lapangan.</p>
-        <button type="button" class="btn-detail" data-program="medis">Lihat Detail</button>
-      </article>
-      <article>
-        <img src="images/pangan.svg" alt="Dapur umum dan paket pangan" width="320" height="180" loading="lazy">
-        <h3>2. Dapur Umum &amp; Paket Pangan</h3>
-        <p>Distribusi ribuan porsi makanan hangat dan bahan pokok gandum untuk keluarga di pengungsian.</p>
-        <button type="button" class="btn-detail" data-program="pangan">Lihat Detail</button>
-      </article>
-      <article>
-        <img src="images/air.svg" alt="Air bersih" width="320" height="180" loading="lazy">
-        <h3>3. Truk Air Bersih &amp; Sanitasi</h3>
-        <p>Pasokan air layak minum dan penyediaan fasilitas sanitasi darurat untuk mencegah penyakit.</p>
-        <button type="button" class="btn-detail" data-program="air">Lihat Detail</button>
-      </article>
+      <?php foreach ($programs as $i => $p): ?>
+        <?php
+          $persen = hitung_persen($p);
+          list($label, $kelas) = status_program($persen);
+        ?>
+        <article>
+          <img src="images/<?= e($p['id']) ?>.svg" alt="<?= e($p['title']) ?>" width="320" height="180" loading="lazy">
+          <div class="kartu-status"><span class="badge badge-<?= e($kelas) ?>"><?= e($label) ?> &middot; <?= $persen ?>%</span></div>
+          <h3><?= $i + 1 ?>. <?= e($p['title']) ?></h3>
+          <p><?= e($p['description']) ?></p>
+          <button type="button" class="btn-detail" data-program="<?= e($p['id']) ?>">Lihat Detail</button>
+        </article>
+      <?php endforeach; ?>
 
       <div id="detail-program" class="detail" hidden>
         <button type="button" class="detail-tutup" aria-label="Tutup detail">&times;</button>
@@ -73,20 +103,15 @@
 
     <section id="statistik">
       <h2>Statistik Capaian Donasi</h2>
-      <div class="stat">
-        <p class="stat-angka">Rp 850.000.000</p>
-        <p class="stat-label">Total Dana Terhimpun</p>
-      </div>
-      <div class="stat">
-        <p class="stat-angka">4.520 Orang</p>
-        <p class="stat-label">Jumlah Donatur Tergabung</p>
-      </div>
-      <div class="stat">
-        <p class="stat-angka">12.500 Warga</p>
-        <p class="stat-label">Penerima Manfaat Bantuan</p>
-      </div>
+      <?php foreach ($statistik as $s): ?>
+        <div class="stat">
+          <p class="stat-angka"><?= e($s['angka']) ?></p>
+          <p class="stat-label"><?= e($s['label']) ?></p>
+        </div>
+      <?php endforeach; ?>
     </section>
 
+    <!-- Week 4: data dari API (api/programs.php) lewat fetch -->
     <section id="api-programs" aria-live="polite">
       <h2>Data API Program Kemanusiaan</h2>
       <div class="api-status api-loading" id="api-status">Mengambil data program...</div>
@@ -98,22 +123,20 @@
 
     <section id="agenda">
       <h2>Agenda &amp; Laporan Penyaluran</h2>
-      <article>
-        <img src="images/air.svg" alt="Distribusi air bersih" width="320" height="180" loading="lazy">
-        <div>
-        <time datetime="2026-09-25">25 September 2026</time>
-        <h3>Distribusi 500 Tangki Air Bersih</h3>
-        <p>Penyaluran air bersih untuk kamp-kamp pengungsian wilayah Khan Younis dan Deir al-Balah.</p>
-        </div>
-      </article>
-      <article>
-        <img src="images/medis.svg" alt="Pengiriman paket medis" width="320" height="180" loading="lazy">
-        <div>
-        <time datetime="2026-09-20">20 September 2026</time>
-        <h3>Pengiriman Paket Medis ke RS Lapangan</h3>
-        <p>Peralatan bedah darurat dan infus telah diterima oleh dokter sukarelawan setempat.</p>
-        </div>
-      </article>
+      <?php if (empty($agenda)): ?>
+        <p>Belum ada agenda penyaluran.</p>
+      <?php else: ?>
+        <?php foreach ($agenda as $a): ?>
+          <article>
+            <img src="images/<?= e($a['gambar']) ?>.svg" alt="<?= e($a['alt']) ?>" width="320" height="180" loading="lazy">
+            <div>
+              <time datetime="<?= e($a['tanggal']) ?>"><?= e(tanggal_indonesia($a['tanggal'])) ?></time>
+              <h3><?= e($a['judul']) ?></h3>
+              <p><?= e($a['isi']) ?></p>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      <?php endif; ?>
     </section>
 
     <section id="donasi">
@@ -126,9 +149,9 @@
         <div>
           <label for="program">Pilih Program Bantuan:</label>
           <select id="program" name="program">
-            <option value="medis">Bantuan Medis Darurat</option>
-            <option value="pangan">Paket Pangan &amp; Dapur Umum</option>
-            <option value="air">Air Bersih &amp; Sanitasi</option>
+            <?php foreach ($programs as $p): ?>
+              <option value="<?= e($p['id']) ?>"><?= e($p['title']) ?></option>
+            <?php endforeach; ?>
           </select>
         </div>
         <div>
@@ -149,7 +172,12 @@
   </main>
 
   <footer>
-    <p>&copy; 2026 PeduliPalestina - Lembaga Penggalangan Dana Kemanusiaan Terpercaya</p>
+    <p>&copy; <?= date('Y') ?> <?= e($lembaga['nama']) ?> - Lembaga Penggalangan Dana Kemanusiaan Terpercaya</p>
   </footer>
+
+  <!-- Data dari PHP diteruskan ke JavaScript (panel detail) -->
+  <script>
+    const dataProgram = <?= json_encode($programs_by_id, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+  </script>
 </body>
 </html>
