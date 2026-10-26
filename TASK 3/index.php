@@ -1,10 +1,13 @@
-<?php require __DIR__ . '/data.php'; ?>
+<?php
+require __DIR__ . '/data.php';
+$profil = $lembaga->getProfile();   // method object Lembaga
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= e($lembaga['nama']) ?> - Salurkan Bantuan Kemanusiaan</title>
+  <title><?= e($profil['nama']) ?> - Salurkan Bantuan Kemanusiaan</title>
   <meta name="description" content="Salurkan donasi kemanusiaan untuk Palestina: bantuan medis, pangan, dan air bersih secara amanah dan transparan.">
   <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
@@ -41,25 +44,25 @@
       <img class="hero-gambar" src="images/hero.svg" alt="Ilustrasi bantuan kemanusiaan: hati, air bersih, dan paket medis" width="480" height="360">
     </section>
 
-    <!-- Week 5 Task 01: informasi dari variable PHP -->
+    <!-- Week 6: informasi dari object Lembaga (getProfile) -->
     <section id="info-lembaga">
       <h2>Informasi Lembaga</h2>
       <dl class="info-grid">
         <div class="info-item">
           <dt>Nama Lembaga</dt>
-          <dd><?= e($lembaga['nama']) ?></dd>
+          <dd><?= e($profil['nama']) ?></dd>
         </div>
         <div class="info-item">
           <dt>Periode Kampanye</dt>
-          <dd><?= e($lembaga['periode']) ?></dd>
+          <dd><?= e($profil['periode']) ?></dd>
         </div>
         <div class="info-item">
           <dt>Program Prioritas</dt>
           <dd>
-            <?= count($programs) ?> program
+            <?= $profil['jumlah_program'] ?> program
             <ul>
               <?php foreach ($programs as $p): ?>
-                <li><?= e($p['title']) ?></li>
+                <li><?= e($p->getTitle()) ?></li>
               <?php endforeach; ?>
             </ul>
           </dd>
@@ -67,27 +70,27 @@
         <div class="info-item">
           <dt>Status Program</dt>
           <dd>
-            <span class="badge badge-<?= e($status_kelas) ?>"><?= e($status_label) ?></span>
-            <small><?= $persen_total ?>% dari target dana</small>
+            <span class="badge badge-<?= e($profil['status_kelas']) ?>"><?= e($profil['status_label']) ?></span>
+            <small><?= $profil['persen'] ?>% dari target dana</small>
           </dd>
         </div>
       </dl>
     </section>
 
-    <!-- Week 5 Task 02 & 03: kartu dibuat PHP dari array (loop + conditional) -->
+    <!-- Week 6: kartu dibuat dari object Program (getPrograms) -->
     <section id="program-prioritas">
       <h2>Program Prioritas Bantuan</h2>
       <?php foreach ($programs as $i => $p): ?>
         <?php
-          $persen = hitung_persen($p);
-          list($label, $kelas) = status_program($persen);
+          $persen = $p->persen();
+          list($label, $kelas) = $p->status();
         ?>
         <article>
-          <img src="images/<?= e($p['id']) ?>.svg" alt="<?= e($p['title']) ?>" width="320" height="180" loading="lazy">
+          <img src="images/<?= e($p->getId()) ?>.svg" alt="<?= e($p->getTitle()) ?>" width="320" height="180" loading="lazy">
           <div class="kartu-status"><span class="badge badge-<?= e($kelas) ?>"><?= e($label) ?> &middot; <?= $persen ?>%</span></div>
-          <h3><?= $i + 1 ?>. <?= e($p['title']) ?></h3>
-          <p><?= e($p['description']) ?></p>
-          <button type="button" class="btn-detail" data-program="<?= e($p['id']) ?>">Lihat Detail</button>
+          <h3><?= $i + 1 ?>. <?= e($p->getTitle()) ?></h3>
+          <p><?= e($p->getDescription()) ?></p>
+          <button type="button" class="btn-detail" data-program="<?= e($p->getId()) ?>">Lihat Detail</button>
         </article>
       <?php endforeach; ?>
 
@@ -150,7 +153,7 @@
           <label for="program">Pilih Program Bantuan:</label>
           <select id="program" name="program">
             <?php foreach ($programs as $p): ?>
-              <option value="<?= e($p['id']) ?>"><?= e($p['title']) ?></option>
+              <option value="<?= e($p->getId()) ?>"><?= e($p->getTitle()) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -172,7 +175,7 @@
   </main>
 
   <footer>
-    <p>&copy; <?= date('Y') ?> <?= e($lembaga['nama']) ?> - Lembaga Penggalangan Dana Kemanusiaan Terpercaya</p>
+    <p>&copy; <?= date('Y') ?> <?= e($profil['nama']) ?> - Lembaga Penggalangan Dana Kemanusiaan Terpercaya</p>
   </footer>
 
   <!-- Data dari PHP diteruskan ke JavaScript (panel detail) -->
