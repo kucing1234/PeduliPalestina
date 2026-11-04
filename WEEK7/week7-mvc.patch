@@ -1,0 +1,1034 @@
+diff --git a/TASK 3/Controller/LembagaController.php b/TASK 3/Controller/LembagaController.php
+new file mode 100644
+index 0000000..6060d02
+--- /dev/null
++++ b/TASK 3/Controller/LembagaController.php	
+@@ -0,0 +1,122 @@
++<?php
++/* =========================================================
++   Controller/LembagaController.php - Controller (Week 7: MVC)
++   Alur: Request -> Controller -> Model -> Controller -> View
++   Method: index(), show(), process(), api()
++   ========================================================= */
++require_once __DIR__ . '/../Model/LembagaRepository.php';
++require_once __DIR__ . '/../Model/Donasi.php';
++require_once __DIR__ . '/../View/helpers.php';
++
++class LembagaController
++{
++    private LembagaRepository $repository;
++    private Lembaga $lembaga;
++
++    public function __construct()
++    {
++        $this->repository = new LembagaRepository();
++        $this->lembaga    = $this->repository->ambilLembaga();   // minta data ke Model
++    }
++
++    // Halaman utama: ambil data dari Model, olah, kirim ke View
++    public function index(?array $hasilDonasi = null, array $old = []): void
++    {
++        $profil = $this->lembaga->getProfile();
++
++        $this->render('lembaga-page', [
++            'judulHalaman'   => $profil['nama'] . ' - Salurkan Bantuan Kemanusiaan',
++            'basePath'       => '',
++            'profil'         => $profil,
++            'programs'       => $this->lembaga->getPrograms(),
++            'programs_by_id' => $this->lembaga->getProgramsById(),
++            'agenda'         => $this->repository->ambilAgenda(),
++            'statistik'      => $this->buatStatistik(),
++            'hasilDonasi'    => $hasilDonasi,
++            'old'            => $old,
++            'programDipilih' => $old['program'] ?? (string) ($_GET['program'] ?? ''),
++        ]);
++    }
++
++    // Halaman detail satu program: index.php?aksi=show&id=medis
++    public function show(string $id): void
++    {
++        $program = $this->lembaga->cariProgram($id);
++
++        if ($program === null) {
++            http_response_code(404);
++            $this->render('not-found', [
++                'judulHalaman' => 'Program tidak ditemukan - ' . $this->lembaga->getNama(),
++                'basePath'     => 'index.php',
++                'namaLembaga'  => $this->lembaga->getNama(),
++            ]);
++            return;
++        }
++
++        $this->render('program-detail', [
++            'judulHalaman' => $program->getTitle() . ' - ' . $this->lembaga->getNama(),
++            'basePath'     => 'index.php',
++            'namaLembaga'  => $this->lembaga->getNama(),
++            'program'      => $program,
++        ]);
++    }
++
++    // Memproses form donasi (POST): validasi lewat Model Donasi, lalu tampilkan hasil
++    public function process(): void
++    {
++        $donasi = new Donasi($_POST);
++        $errors = $donasi->validasi($this->lembaga, $_FILES['bukti'] ?? null);
++
++        if ($errors) {
++            http_response_code(422);
++            $hasil = ['sukses' => false, 'errors' => $errors];
++            $old = [
++                'nama'    => (string) ($_POST['nama'] ?? ''),
++                'program' => $donasi->getProgramId(),
++                'nominal' => (string) ($_POST['nominal'] ?? ''),
++                'doa'     => (string) ($_POST['doa'] ?? ''),
++            ];
++            $this->index($hasil, $old);
++            return;
++        }
++
++        $program = $this->lembaga->cariProgram($donasi->getProgramId());
++        $hasil = [
++            'sukses' => true,
++            'pesan'  => 'Jazakumullah khairan, ' . $donasi->getNama() . '. Donasi ' .
++                        rupiah($donasi->getNominal()) . ' untuk program "' . $program->getTitle() .
++                        '" sudah kami terima dan menunggu verifikasi admin.',
++        ];
++        $this->index($hasil);
++    }
++
++    // Endpoint JSON (dipakai fetch di script.js): api/programs.php
++    public function api(): void
++    {
++        header('Content-Type: application/json; charset=utf-8');
++        echo json_encode(
++            array_map(fn($p) => $p->toArray(), $this->lembaga->getPrograms()),
++            JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
++        );
++    }
++
++    // Statistik ringkas dari Model, sudah diformat untuk ditampilkan
++    private function buatStatistik(): array
++    {
++        return [
++            ['angka' => rupiah($this->lembaga->totalTerkumpul()),
++             'label' => 'Total Dana Terhimpun'],
++            ['angka' => number_format($this->lembaga->getJumlahDonatur(), 0, ',', '.') . ' Orang',
++             'label' => 'Jumlah Donatur Tergabung'],
++            ['angka' => number_format($this->lembaga->getPenerimaManfaat(), 0, ',', '.') . ' Warga',
++             'label' => 'Penerima Manfaat Bantuan'],
++        ];
++    }
++
++    // Mengirim data ke View: variabel dari $data tersedia di file view
++    private function render(string $view, array $data): void
++    {
++        extract($data, EXTR_SKIP);
++        require __DIR__ . '/../View/' . $view . '.php';
++    }
++}
+diff --git a/TASK 3/Model/Donasi.php b/TASK 3/Model/Donasi.php
+new file mode 100644
+index 0000000..32329d1
+--- /dev/null
++++ b/TASK 3/Model/Donasi.php	
+@@ -0,0 +1,62 @@
++<?php
++/* =========================================================
++   Model/Donasi.php - data dan aturan (business data) untuk donasi
++   Dipakai oleh LembagaController::process()
++   ========================================================= */
++require_once __DIR__ . '/Lembaga.php';
++
++class Donasi
++{
++    public const NOMINAL_MINIMAL = 1000;
++    public const UKURAN_BUKTI_MAKS = 2 * 1024 * 1024; // 2 MB
++
++    private string $nama;
++    private string $programId;
++    private int $nominal;
++    private string $doa;
++
++    public function __construct(array $input)
++    {
++        $nama = trim((string) ($input['nama'] ?? ''));
++        $this->nama      = $nama === '' ? 'Hamba Allah' : self::potong($nama, 80);
++        $this->programId = trim((string) ($input['program'] ?? ''));
++        $nominal         = filter_var($input['nominal'] ?? '', FILTER_VALIDATE_INT);
++        $this->nominal   = $nominal === false ? 0 : $nominal;
++        $this->doa       = self::potong(trim((string) ($input['doa'] ?? '')), 300);
++    }
++
++    // Potong teks maksimal $maks karakter (aman untuk UTF-8, tanpa ekstensi mbstring)
++    private static function potong(string $teks, int $maks): string
++    {
++        return preg_match('/^.{0,' . $maks . '}/us', $teks, $m) ? $m[0] : '';
++    }
++
++    public function getNama(): string      { return $this->nama; }
++    public function getProgramId(): string { return $this->programId; }
++    public function getNominal(): int      { return $this->nominal; }
++    public function getDoa(): string       { return $this->doa; }
++
++    // Mengembalikan daftar pesan error (array kosong = valid)
++    public function validasi(Lembaga $lembaga, ?array $bukti = null): array
++    {
++        $errors = [];
++
++        if ($lembaga->cariProgram($this->programId) === null) {
++            $errors[] = 'Program bantuan yang dipilih tidak ditemukan.';
++        }
++        if ($this->nominal < self::NOMINAL_MINIMAL) {
++            $errors[] = 'Nominal donasi minimal Rp ' . number_format(self::NOMINAL_MINIMAL, 0, ',', '.') . '.';
++        }
++        if ($bukti !== null && ($bukti['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
++            if ($bukti['error'] !== UPLOAD_ERR_OK) {
++                $errors[] = 'Bukti transfer gagal diunggah. Silakan coba lagi.';
++            } elseif ($bukti['size'] > self::UKURAN_BUKTI_MAKS) {
++                $errors[] = 'Ukuran bukti transfer maksimal 2 MB.';
++            } elseif (@getimagesize($bukti['tmp_name']) === false) {
++                $errors[] = 'Bukti transfer harus berupa gambar.';
++            }
++        }
++
++        return $errors;
++    }
++}
+diff --git a/TASK 3/Lembaga.php b/TASK 3/Model/Lembaga.php
+similarity index 89%
+rename from TASK 3/Lembaga.php
+rename to TASK 3/Model/Lembaga.php
+index dcbbe62..7e4c3ed 100644
+--- a/TASK 3/Lembaga.php	
++++ b/TASK 3/Model/Lembaga.php	
+@@ -1,7 +1,7 @@
+ <?php
+ /* =========================================================
+-   Lembaga.php - class Lembaga (Week 6: setara class President)
+-   Data: nama, periode, programs. Behavior: getProfile(), getPrograms()
++   Model/Lembaga.php - class Lembaga (Week 7: bagian Model dalam MVC)
++   Data: nama, periode, programs. Behavior: getProfile(), getPrograms(), cariProgram()
+    ========================================================= */
+ require_once __DIR__ . '/Program.php';
+ 
+@@ -96,6 +96,17 @@ class Lembaga
+         ];
+     }
+ 
++    // Behavior: cari satu Program berdasarkan id (null jika tidak ada)
++    public function cariProgram(string $id): ?Program
++    {
++        foreach ($this->programs as $p) {
++            if ($p->getId() === $id) {
++                return $p;
++            }
++        }
++        return null;
++    }
++
+     // Data per-id untuk panel detail di JavaScript
+     public function getProgramsById(): array
+     {
+diff --git a/TASK 3/Model/LembagaRepository.php b/TASK 3/Model/LembagaRepository.php
+new file mode 100644
+index 0000000..7217bbd
+--- /dev/null
++++ b/TASK 3/Model/LembagaRepository.php	
+@@ -0,0 +1,47 @@
++<?php
++/* =========================================================
++   Model/LembagaRepository.php - Data Access (Week 7: MVC)
++   Satu-satunya tempat data lembaga, program, dan agenda disimpan.
++   Controller meminta data lewat class ini, bukan dari file lain.
++   ========================================================= */
++require_once __DIR__ . '/Lembaga.php';
++
++class LembagaRepository
++{
++    // Mengembalikan object Lembaga yang berisi object Program
++    public function ambilLembaga(): Lembaga
++    {
++        return new Lembaga('PeduliPalestina', '2026 - 2027', 4520, 12500, [
++            new Program('medis', 'Bantuan Medis & Ambulans Darurat',
++                'Penyediaan obat-obatan esensial, kasa steril, dan operasional tim medis darurat di lapangan.',
++                500000000, 320000000, 'Kesehatan'),
++            new Program('pangan', 'Dapur Umum & Paket Pangan',
++                'Distribusi ribuan porsi makanan hangat dan bahan pokok gandum untuk keluarga di pengungsian.',
++                400000000, 280000000, 'Pangan'),
++            new Program('air', 'Truk Air Bersih & Sanitasi',
++                'Pasokan air layak minum dan penyediaan fasilitas sanitasi darurat untuk mencegah penyakit.',
++                300000000, 250000000, 'Air & Sanitasi'),
++        ]);
++    }
++
++    // Mengembalikan daftar agenda penyaluran (data mentah)
++    public function ambilAgenda(): array
++    {
++        return [
++            [
++                'tanggal' => '2026-09-25',
++                'judul'   => 'Distribusi 500 Tangki Air Bersih',
++                'isi'     => 'Penyaluran air bersih untuk kamp-kamp pengungsian wilayah Khan Younis dan Deir al-Balah.',
++                'gambar'  => 'air',
++                'alt'     => 'Distribusi air bersih',
++            ],
++            [
++                'tanggal' => '2026-09-20',
++                'judul'   => 'Pengiriman Paket Medis ke RS Lapangan',
++                'isi'     => 'Peralatan bedah darurat dan infus telah diterima oleh dokter sukarelawan setempat.',
++                'gambar'  => 'medis',
++                'alt'     => 'Pengiriman paket medis',
++            ],
++        ];
++    }
++}
+diff --git a/TASK 3/Program.php b/TASK 3/Model/Program.php
+similarity index 96%
+rename from TASK 3/Program.php
+rename to TASK 3/Model/Program.php
+index c91fbfb..1b4f2f6 100644
+--- a/TASK 3/Program.php	
++++ b/TASK 3/Model/Program.php	
+@@ -1,6 +1,6 @@
+ <?php
+ /* =========================================================
+-   Program.php - class Program (Week 6: OOP)
++   Model/Program.php - class Program (Week 6: OOP, Week 7: bagian Model dalam MVC)
+    ========================================================= */
+ class Program
+ {
+diff --git a/TASK 3/README.md b/TASK 3/README.md
+index 66bc24c..c970bc7 100644
+--- a/TASK 3/README.md	
++++ b/TASK 3/README.md	
+@@ -17,20 +17,43 @@ Mode uji state API (Week 4 Task 03):
+ - `index.php?simulasi=lambat` : loading tampil 2 detik
+ - `index.php?simulasi=error` : pesan error + tombol "Coba Lagi"
+ 
+-## Struktur Folder
++## Struktur Folder (MVC - Week 7)
+ 
+ ```
+ .
+-├── index.php          # halaman utama (konten dinamis dari PHP)
+-├── data.php           # data (variable, array), fungsi bantu, pemrosesan
+-├── api/programs.php   # endpoint JSON dari data.php
+-├── data/programs.json # sumber data cadangan untuk fetch
++├── index.php                      # front controller: terima request, teruskan ke Controller
++├── Controller/
++│   └── LembagaController.php      # index(), show(), process(), api()
++├── Model/
++│   ├── Lembaga.php                # class Lembaga (data + logika lembaga)
++│   ├── Program.php                # class Program (data + logika program)
++│   ├── Donasi.php                 # data + validasi donasi
++│   └── LembagaRepository.php      # sumber data lembaga, program, agenda
++├── View/
++│   ├── helpers.php                # e(), rupiah(), tanggal_indonesia()
++│   ├── lembaga-page.php           # halaman utama
++│   ├── program-detail.php         # halaman detail satu program
++│   ├── not-found.php              # program tidak ditemukan (404)
++│   └── partials/
++│       ├── header.php
++│       └── footer.php
++├── api/programs.php               # endpoint JSON, diteruskan ke Controller::api()
++├── data/programs.json             # sumber data cadangan untuk fetch
+ ├── script.js
+ ├── style.css
+ ├── images/
+ └── README.md
+ ```
+ 
++Alur: `Request -> index.php -> Controller -> Model -> Controller -> View -> HTML`
++
++| URL | Method Controller |
++| --- | --- |
++| `index.php` | `index()` halaman utama |
++| `index.php?aksi=show&id=medis` | `show('medis')` halaman detail program |
++| `POST index.php?aksi=process` | `process()` memproses form donasi |
++| `api/programs.php` | `api()` data JSON program |
++
+ ## Checklist Week 4 - Connect PeduliPalestina to an API
+ 
+ - [x] Task 01 Connect to API: `fetch('api/programs.php')`, fallback `data/programs.json`
+@@ -60,6 +83,36 @@ Mode uji state API (Week 4 Task 03):
+   - [x] Tampilan tetap sesuai desain
+   - [x] Tidak merusak halaman
+ 
++## Checklist Week 7 - From OOP to MVC (Sprint 06)
++
++- [x] Task 01 Design the MVC Structure
++  - [x] Model ditentukan: `Lembaga`, `Program`, `Donasi`, `LembagaRepository` (folder `Model/`)
++  - [x] View ditentukan: `lembaga-page.php`, `program-detail.php`, `not-found.php`, partials (folder `View/`)
++  - [x] Controller ditentukan: `LembagaController` (folder `Controller/`)
++  - [x] Tanggung jawab masing-masing jelas (Model = data, View = tampilan, Controller = alur)
++- [x] Task 02 Build the Controller
++  - [x] Controller berjalan dan request diterima lewat `index.php`
++  - [x] Method dapat dijalankan: `index()`, `show()`, `process()`, `api()`
++  - [x] Model dapat dipanggil (`LembagaRepository`, `Donasi`)
++  - [x] View dapat ditampilkan lewat `render()`
++- [x] Task 03 Connect Model, Controller & View
++  - [x] Data berasal dari Model
++  - [x] Controller memproses data (statistik, validasi donasi)
++  - [x] Data dikirim ke View, View hanya menampilkan
++  - [x] Tidak ada error (diuji: halaman utama, detail, 404, API, form donasi valid/tidak valid)
++
++### Jawaban Pertanyaan Demo
++
++1. **Fungsi Controller:** menerima request, memanggil Model, lalu meneruskan hasilnya ke View (`LembagaController`).
++2. **Data yang dikelola Model:** nama lembaga, periode, daftar program (judul, target, dana terkumpul, kategori), agenda, dan data donasi beserta validasinya.
++3. **Yang ditampilkan View:** halaman utama, kartu program, statistik, agenda, form donasi, halaman detail program, dan pesan hasil donasi.
++4. **Controller ke Model:** lewat object, misalnya `$this->repository->ambilLembaga()`, `$lembaga->cariProgram($id)`, dan `new Donasi($_POST)`.
++5. **Data sampai ke View:** Controller memanggil `render('lembaga-page', $data)`; `extract()` membuat tiap key menjadi variabel (`$profil`, `$programs`, dst.) yang dipakai file View.
++
++### Jawaban Pertanyaan Review
++
++Bagian yang jadi lebih mudah dikelola: data dan aturan program (Model) kini terpisah dari HTML. Mengubah data program cukup di `LembagaRepository`, mengubah tampilan cukup di `View/`, dan menambah halaman baru cukup menambah method Controller. Sebelumnya `data.php` memuat data, fungsi bantu, dan statistik sekaligus.
++
+ ## Teknologi
+ 
+ HTML5, CSS3 (variables, Flexbox, Grid, media query), JavaScript (Fetch API, async/await), PHP.
+diff --git a/TASK 3/View/helpers.php b/TASK 3/View/helpers.php
+new file mode 100644
+index 0000000..41b47ee
+--- /dev/null
++++ b/TASK 3/View/helpers.php	
+@@ -0,0 +1,25 @@
++<?php
++/* =========================================================
++   View/helpers.php - fungsi bantu untuk menampilkan data
++   (escape HTML, format rupiah, format tanggal)
++   ========================================================= */
++
++function e($teks)
++{
++    return htmlspecialchars((string) $teks, ENT_QUOTES, 'UTF-8');
++}
++
++function rupiah($angka)
++{
++    return 'Rp ' . number_format($angka, 0, ',', '.');
++}
++
++function tanggal_indonesia($tanggal)
++{
++    $bulan = [
++        1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
++        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
++    ];
++    $waktu = strtotime($tanggal);
++    return date('j', $waktu) . ' ' . $bulan[(int) date('n', $waktu)] . ' ' . date('Y', $waktu);
++}
+diff --git a/TASK 3/View/lembaga-page.php b/TASK 3/View/lembaga-page.php
+new file mode 100644
+index 0000000..265665d
+--- /dev/null
++++ b/TASK 3/View/lembaga-page.php	
+@@ -0,0 +1,171 @@
++<?php
++/* View/lembaga-page.php - halaman utama.
++   Hanya menampilkan data yang dikirim Controller:
++   $profil, $programs, $programs_by_id, $agenda, $statistik, $hasilDonasi, $old, $programDipilih */
++$namaLembaga = $profil['nama'];
++require __DIR__ . '/partials/header.php';
++?>
++
++  <main id="main">
++    <section id="hero">
++      <div class="hero-teks">
++        <h1>Ulurkan Tangan untuk Kemanusiaan di Palestina</h1>
++        <p>Bantu saudara-saudara kita yang membutuhkan obat-obatan, paket pangan, dan air bersih secara amanah dan transparan.</p>
++        <a href="#donasi" class="btn btn-terang">Donasi Sekarang &rarr;</a>
++      </div>
++      <img class="hero-gambar" src="images/hero.svg" alt="Ilustrasi bantuan kemanusiaan: hati, air bersih, dan paket medis" width="480" height="360">
++    </section>
++
++    <!-- Week 6: informasi dari object Lembaga (getProfile) -->
++    <section id="info-lembaga">
++      <h2>Informasi Lembaga</h2>
++      <dl class="info-grid">
++        <div class="info-item">
++          <dt>Nama Lembaga</dt>
++          <dd><?= e($profil['nama']) ?></dd>
++        </div>
++        <div class="info-item">
++          <dt>Periode Kampanye</dt>
++          <dd><?= e($profil['periode']) ?></dd>
++        </div>
++        <div class="info-item">
++          <dt>Program Prioritas</dt>
++          <dd>
++            <?= $profil['jumlah_program'] ?> program
++            <ul>
++              <?php foreach ($programs as $p): ?>
++                <li><?= e($p->getTitle()) ?></li>
++              <?php endforeach; ?>
++            </ul>
++          </dd>
++        </div>
++        <div class="info-item">
++          <dt>Status Program</dt>
++          <dd>
++            <span class="badge badge-<?= e($profil['status_kelas']) ?>"><?= e($profil['status_label']) ?></span>
++            <small><?= $profil['persen'] ?>% dari target dana</small>
++          </dd>
++        </div>
++      </dl>
++    </section>
++
++    <!-- Week 6: kartu dibuat dari object Program (getPrograms) -->
++    <section id="program-prioritas">
++      <h2>Program Prioritas Bantuan</h2>
++      <?php foreach ($programs as $i => $p): ?>
++        <?php
++          $persen = $p->persen();
++          list($label, $kelas) = $p->status();
++        ?>
++        <article>
++          <img src="images/<?= e($p->getId()) ?>.svg" alt="<?= e($p->getTitle()) ?>" width="320" height="180" loading="lazy">
++          <div class="kartu-status"><span class="badge badge-<?= e($kelas) ?>"><?= e($label) ?> &middot; <?= $persen ?>%</span></div>
++          <h3><?= $i + 1 ?>. <?= e($p->getTitle()) ?></h3>
++          <p><?= e($p->getDescription()) ?></p>
++          <button type="button" class="btn-detail" data-program="<?= e($p->getId()) ?>">Lihat Detail</button>
++          <a class="btn btn-detail btn-halaman" href="index.php?aksi=show&amp;id=<?= e($p->getId()) ?>">Halaman Detail</a>
++        </article>
++      <?php endforeach; ?>
++
++      <div id="detail-program" class="detail" hidden>
++        <button type="button" class="detail-tutup" aria-label="Tutup detail">&times;</button>
++        <h3 id="detail-judul"></h3>
++        <p id="detail-deskripsi"></p>
++        <progress id="detail-progress" max="100" value="0"></progress>
++        <p id="detail-dana"></p>
++        <button type="button" id="detail-donasi">Donasi untuk program ini</button>
++      </div>
++    </section>
++
++    <section id="statistik">
++      <h2>Statistik Capaian Donasi</h2>
++      <?php foreach ($statistik as $s): ?>
++        <div class="stat">
++          <p class="stat-angka"><?= e($s['angka']) ?></p>
++          <p class="stat-label"><?= e($s['label']) ?></p>
++        </div>
++      <?php endforeach; ?>
++    </section>
++
++    <!-- Week 4: data dari API (api/programs.php) lewat fetch -->
++    <section id="api-programs" aria-live="polite">
++      <h2>Data API Program Kemanusiaan</h2>
++      <div class="api-status api-loading" id="api-status">Mengambil data program...</div>
++      <div class="api-actions">
++        <button type="button" class="btn btn-api" id="refresh-api">Refresh Data</button>
++      </div>
++      <div class="api-list" id="api-program-list"></div>
++    </section>
++
++    <section id="agenda">
++      <h2>Agenda &amp; Laporan Penyaluran</h2>
++      <?php if (empty($agenda)): ?>
++        <p>Belum ada agenda penyaluran.</p>
++      <?php else: ?>
++        <?php foreach ($agenda as $a): ?>
++          <article>
++            <img src="images/<?= e($a['gambar']) ?>.svg" alt="<?= e($a['alt']) ?>" width="320" height="180" loading="lazy">
++            <div>
++              <time datetime="<?= e($a['tanggal']) ?>"><?= e(tanggal_indonesia($a['tanggal'])) ?></time>
++              <h3><?= e($a['judul']) ?></h3>
++              <p><?= e($a['isi']) ?></p>
++            </div>
++          </article>
++        <?php endforeach; ?>
++      <?php endif; ?>
++    </section>
++
++    <section id="donasi">
++      <h2>Formulir Donasi Kemanusiaan</h2>
++      <?php if (!empty($hasilDonasi)): ?>
++        <div class="api-status api-<?= $hasilDonasi['sukses'] ? 'success' : 'error' ?>" id="hasil-donasi" role="status">
++          <?php if ($hasilDonasi['sukses']): ?>
++            <?= e($hasilDonasi['pesan']) ?>
++          <?php else: ?>
++            <strong>Donasi belum dapat diproses:</strong>
++            <ul>
++              <?php foreach ($hasilDonasi['errors'] as $pesan): ?>
++                <li><?= e($pesan) ?></li>
++              <?php endforeach; ?>
++            </ul>
++          <?php endif; ?>
++        </div>
++      <?php endif; ?>
++      <form action="index.php?aksi=process#donasi" method="post" enctype="multipart/form-data">
++        <div>
++          <label for="nama">Nama Donatur:</label>
++          <input type="text" id="nama" name="nama" value="<?= e($old['nama'] ?? '') ?>" placeholder="Isi 'Hamba Allah' jika anonim">
++        </div>
++        <div>
++          <label for="program">Pilih Program Bantuan:</label>
++          <select id="program" name="program">
++            <?php foreach ($programs as $p): ?>
++              <option value="<?= e($p->getId()) ?>"<?= $p->getId() === $programDipilih ? ' selected' : '' ?>><?= e($p->getTitle()) ?></option>
++            <?php endforeach; ?>
++          </select>
++        </div>
++        <div>
++          <label for="nominal">Nominal Donasi (Rp):</label>
++          <input type="number" id="nominal" name="nominal" min="1000" step="1000" value="<?= e($old['nominal'] ?? '') ?>" placeholder="Contoh: 100000" required>
++        </div>
++        <div>
++          <label for="doa">Doa &amp; Pesan Kebaikan:</label>
++          <textarea id="doa" name="doa" rows="3" placeholder="Tuliskan doa untuk warga Palestina..."><?= e($old['doa'] ?? '') ?></textarea>
++        </div>
++        <div>
++          <label for="bukti">Unggah Bukti Transfer:</label>
++          <input type="file" id="bukti" name="bukti" accept="image/*">
++        </div>
++        <button type="submit">Kirim Donasi</button>
++      </form>
++    </section>
++  </main>
++
++<?php require __DIR__ . '/partials/footer.php'; ?>
++
++  <!-- Data dari PHP diteruskan ke JavaScript (panel detail) -->
++  <script>
++    const dataProgram = <?= json_encode($programs_by_id, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
++  </script>
++</body>
++</html>
+diff --git a/TASK 3/View/not-found.php b/TASK 3/View/not-found.php
+new file mode 100644
+index 0000000..464392a
+--- /dev/null
++++ b/TASK 3/View/not-found.php	
+@@ -0,0 +1,17 @@
++<?php
++/* View/not-found.php - program tidak ditemukan (404). Data: $namaLembaga */
++require __DIR__ . '/partials/header.php';
++?>
++
++  <main id="main">
++    <section id="detail-halaman" class="halaman-detail">
++      <h1>Program tidak ditemukan</h1>
++      <p>Program yang kamu cari tidak ada atau sudah tidak tersedia.</p>
++      <a class="btn" href="index.php#program-prioritas">Lihat semua program</a>
++    </section>
++  </main>
++
++<?php require __DIR__ . '/partials/footer.php'; ?>
++
++</body>
++</html>
+diff --git a/TASK 3/View/partials/footer.php b/TASK 3/View/partials/footer.php
+new file mode 100644
+index 0000000..0e0cece
+--- /dev/null
++++ b/TASK 3/View/partials/footer.php	
+@@ -0,0 +1,4 @@
++<?php /* View/partials/footer.php - kaki halaman. Butuh: $namaLembaga */ ?>
++  <footer>
++    <p>&copy; <?= date('Y') ?> <?= e($namaLembaga) ?> - Lembaga Penggalangan Dana Kemanusiaan Terpercaya</p>
++  </footer>
+diff --git a/TASK 3/View/partials/header.php b/TASK 3/View/partials/header.php
+new file mode 100644
+index 0000000..017a5fd
+--- /dev/null
++++ b/TASK 3/View/partials/header.php	
+@@ -0,0 +1,32 @@
++<?php /* View/partials/header.php - kepala halaman + navigasi. Butuh: $judulHalaman, $basePath */ ?>
++<!DOCTYPE html>
++<html lang="id">
++<head>
++  <meta charset="UTF-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
++  <title><?= e($judulHalaman) ?></title>
++  <meta name="description" content="Salurkan donasi kemanusiaan untuk Palestina: bantuan medis, pangan, dan air bersih secara amanah dan transparan.">
++  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
++  <link rel="stylesheet" href="style.css">
++  <script src="script.js" defer></script>
++</head>
++<body>
++  <a class="skip-link" href="#main">Lewati ke konten utama</a>
++
++  <header>
++    <div class="logo">
++      <a href="<?= e($basePath) ?>#hero"><img src="images/favicon.svg" alt="" width="32" height="32">Peduli<span>Palestina</span></a>
++    </div>
++    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu" aria-label="Buka menu">
++      <span></span><span></span><span></span>
++    </button>
++    <nav id="menu" aria-label="Navigasi utama">
++      <ul>
++        <li><a href="<?= e($basePath) ?>#hero">Beranda</a></li>
++        <li><a href="<?= e($basePath) ?>#program-prioritas">Program Prioritas</a></li>
++        <li><a href="<?= e($basePath) ?>#statistik">Statistik</a></li>
++        <li><a href="<?= e($basePath) ?>#agenda">Agenda Penyaluran</a></li>
++        <li><a href="<?= e($basePath) ?>#donasi" class="nav-cta">Donasi Sekarang</a></li>
++      </ul>
++    </nav>
++  </header>
+diff --git a/TASK 3/View/program-detail.php b/TASK 3/View/program-detail.php
+new file mode 100644
+index 0000000..d4dad1f
+--- /dev/null
++++ b/TASK 3/View/program-detail.php	
+@@ -0,0 +1,26 @@
++<?php
++/* View/program-detail.php - halaman detail satu program.
++   Data dari Controller::show(): $program (object Program), $namaLembaga */
++$persen = $program->persen();
++list($label, $kelas) = $program->status();
++require __DIR__ . '/partials/header.php';
++?>
++
++  <main id="main">
++    <section id="detail-halaman" class="halaman-detail">
++      <p><a href="index.php#program-prioritas">&larr; Kembali ke daftar program</a></p>
++      <img src="images/<?= e($program->getId()) ?>.svg" alt="<?= e($program->getTitle()) ?>" width="640" height="360">
++      <span class="badge badge-<?= e($kelas) ?>"><?= e($label) ?> &middot; <?= $persen ?>%</span>
++      <h1><?= e($program->getTitle()) ?></h1>
++      <p><?= e($program->getDescription()) ?></p>
++      <p><strong>Kategori:</strong> <?= e($program->getCategory()) ?></p>
++      <progress max="100" value="<?= $persen ?>"></progress>
++      <p><?= e(rupiah($program->getTerkumpul())) ?> dari <?= e(rupiah($program->getTarget())) ?> (<?= $persen ?>%)</p>
++      <a class="btn" href="index.php?program=<?= e($program->getId()) ?>#donasi">Donasi untuk program ini</a>
++    </section>
++  </main>
++
++<?php require __DIR__ . '/partials/footer.php'; ?>
++
++</body>
++</html>
+diff --git a/TASK 3/api/programs.php b/TASK 3/api/programs.php
+index e649496..b5b6b58 100644
+--- a/TASK 3/api/programs.php	
++++ b/TASK 3/api/programs.php	
+@@ -1,8 +1,5 @@
+ <?php
+-require __DIR__ . '/../data.php';
++/* api/programs.php - endpoint JSON, diteruskan ke Controller */
++require __DIR__ . '/../Controller/LembagaController.php';
+ 
+-header('Content-Type: application/json; charset=utf-8');
+-echo json_encode(
+-    array_map(fn($p) => $p->toArray(), $programs),
+-    JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT
+-);
+\ No newline at end of file
++(new LembagaController())->api();
+diff --git a/TASK 3/data.php b/TASK 3/data.php
+deleted file mode 100644
+index da4ac97..0000000
+--- a/TASK 3/data.php	
++++ /dev/null
+@@ -1,70 +0,0 @@
+-<?php
+-/* =========================================================
+-   data.php - sumber data tunggal PeduliPalestina
+-   Dipakai oleh index.php (tampilan) dan api/programs.php (API)
+-   ========================================================= */
+-
+-require_once __DIR__ . '/Lembaga.php';
+-
+-/* ----- Object Lembaga berisi object Program (Week 6: OOP) ----- */
+-$lembaga = new Lembaga('PeduliPalestina', '2026 - 2027', 4520, 12500, [
+-    new Program('medis', 'Bantuan Medis & Ambulans Darurat',
+-        'Penyediaan obat-obatan esensial, kasa steril, dan operasional tim medis darurat di lapangan.',
+-        500000000, 320000000, 'Kesehatan'),
+-    new Program('pangan', 'Dapur Umum & Paket Pangan',
+-        'Distribusi ribuan porsi makanan hangat dan bahan pokok gandum untuk keluarga di pengungsian.',
+-        400000000, 280000000, 'Pangan'),
+-    new Program('air', 'Truk Air Bersih & Sanitasi',
+-        'Pasokan air layak minum dan penyediaan fasilitas sanitasi darurat untuk mencegah penyakit.',
+-        300000000, 250000000, 'Air & Sanitasi'),
+-]);
+-
+-$programs = $lembaga->getPrograms();
+-
+-$agenda = [
+-    [
+-        'tanggal' => '2026-09-25',
+-        'judul'   => 'Distribusi 500 Tangki Air Bersih',
+-        'isi'     => 'Penyaluran air bersih untuk kamp-kamp pengungsian wilayah Khan Younis dan Deir al-Balah.',
+-        'gambar'  => 'air',
+-        'alt'     => 'Distribusi air bersih',
+-    ],
+-    [
+-        'tanggal' => '2026-09-20',
+-        'judul'   => 'Pengiriman Paket Medis ke RS Lapangan',
+-        'isi'     => 'Peralatan bedah darurat dan infus telah diterima oleh dokter sukarelawan setempat.',
+-        'gambar'  => 'medis',
+-        'alt'     => 'Pengiriman paket medis',
+-    ],
+-];
+-
+-/* ----- Fungsi bantu ----- */
+-function e($teks)
+-{
+-    return htmlspecialchars((string) $teks, ENT_QUOTES, 'UTF-8');
+-}
+-
+-function rupiah($angka)
+-{
+-    return 'Rp ' . number_format($angka, 0, ',', '.');
+-}
+-
+-function tanggal_indonesia($tanggal)
+-{
+-    $bulan = [
+-        1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+-    ];
+-    $waktu = strtotime($tanggal);
+-    return date('j', $waktu) . ' ' . $bulan[(int) date('n', $waktu)] . ' ' . date('Y', $waktu);
+-}
+-
+-/* ----- Statistik dari object Lembaga ----- */
+-$statistik = [
+-    ['angka' => rupiah($lembaga->totalTerkumpul()),                                    'label' => 'Total Dana Terhimpun'],
+-    ['angka' => number_format($lembaga->getJumlahDonatur(), 0, ',', '.') . ' Orang',   'label' => 'Jumlah Donatur Tergabung'],
+-    ['angka' => number_format($lembaga->getPenerimaManfaat(), 0, ',', '.') . ' Warga', 'label' => 'Penerima Manfaat Bantuan'],
+-];
+-
+-/* Data per-id untuk panel detail di JavaScript */
+-$programs_by_id = $lembaga->getProgramsById();
+\ No newline at end of file
+diff --git a/TASK 3/index.php b/TASK 3/index.php
+index dfe8745..00555a6 100644
+--- a/TASK 3/index.php	
++++ b/TASK 3/index.php	
+@@ -1,186 +1,20 @@
+ <?php
+-require __DIR__ . '/data.php';
+-$profil = $lembaga->getProfile();   // method object Lembaga
+-?>
+-<!DOCTYPE html>
+-<html lang="id">
+-<head>
+-  <meta charset="UTF-8">
+-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-  <title><?= e($profil['nama']) ?> - Salurkan Bantuan Kemanusiaan</title>
+-  <meta name="description" content="Salurkan donasi kemanusiaan untuk Palestina: bantuan medis, pangan, dan air bersih secara amanah dan transparan.">
+-  <link rel="icon" href="images/favicon.svg" type="image/svg+xml">
+-  <link rel="stylesheet" href="style.css">
+-  <script src="script.js" defer></script>
+-</head>
+-<body>
+-  <a class="skip-link" href="#main">Lewati ke konten utama</a>
+-
+-  <header>
+-    <div class="logo">
+-      <a href="#hero"><img src="images/favicon.svg" alt="" width="32" height="32">Peduli<span>Palestina</span></a>
+-    </div>
+-    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu" aria-label="Buka menu">
+-      <span></span><span></span><span></span>
+-    </button>
+-    <nav id="menu" aria-label="Navigasi utama">
+-      <ul>
+-        <li><a href="#hero">Beranda</a></li>
+-        <li><a href="#program-prioritas">Program Prioritas</a></li>
+-        <li><a href="#statistik">Statistik</a></li>
+-        <li><a href="#agenda">Agenda Penyaluran</a></li>
+-        <li><a href="#donasi" class="nav-cta">Donasi Sekarang</a></li>
+-      </ul>
+-    </nav>
+-  </header>
+-
+-  <main id="main">
+-    <section id="hero">
+-      <div class="hero-teks">
+-        <h1>Ulurkan Tangan untuk Kemanusiaan di Palestina</h1>
+-        <p>Bantu saudara-saudara kita yang membutuhkan obat-obatan, paket pangan, dan air bersih secara amanah dan transparan.</p>
+-        <a href="#donasi" class="btn btn-terang">Donasi Sekarang &rarr;</a>
+-      </div>
+-      <img class="hero-gambar" src="images/hero.svg" alt="Ilustrasi bantuan kemanusiaan: hati, air bersih, dan paket medis" width="480" height="360">
+-    </section>
+-
+-    <!-- Week 6: informasi dari object Lembaga (getProfile) -->
+-    <section id="info-lembaga">
+-      <h2>Informasi Lembaga</h2>
+-      <dl class="info-grid">
+-        <div class="info-item">
+-          <dt>Nama Lembaga</dt>
+-          <dd><?= e($profil['nama']) ?></dd>
+-        </div>
+-        <div class="info-item">
+-          <dt>Periode Kampanye</dt>
+-          <dd><?= e($profil['periode']) ?></dd>
+-        </div>
+-        <div class="info-item">
+-          <dt>Program Prioritas</dt>
+-          <dd>
+-            <?= $profil['jumlah_program'] ?> program
+-            <ul>
+-              <?php foreach ($programs as $p): ?>
+-                <li><?= e($p->getTitle()) ?></li>
+-              <?php endforeach; ?>
+-            </ul>
+-          </dd>
+-        </div>
+-        <div class="info-item">
+-          <dt>Status Program</dt>
+-          <dd>
+-            <span class="badge badge-<?= e($profil['status_kelas']) ?>"><?= e($profil['status_label']) ?></span>
+-            <small><?= $profil['persen'] ?>% dari target dana</small>
+-          </dd>
+-        </div>
+-      </dl>
+-    </section>
+-
+-    <!-- Week 6: kartu dibuat dari object Program (getPrograms) -->
+-    <section id="program-prioritas">
+-      <h2>Program Prioritas Bantuan</h2>
+-      <?php foreach ($programs as $i => $p): ?>
+-        <?php
+-          $persen = $p->persen();
+-          list($label, $kelas) = $p->status();
+-        ?>
+-        <article>
+-          <img src="images/<?= e($p->getId()) ?>.svg" alt="<?= e($p->getTitle()) ?>" width="320" height="180" loading="lazy">
+-          <div class="kartu-status"><span class="badge badge-<?= e($kelas) ?>"><?= e($label) ?> &middot; <?= $persen ?>%</span></div>
+-          <h3><?= $i + 1 ?>. <?= e($p->getTitle()) ?></h3>
+-          <p><?= e($p->getDescription()) ?></p>
+-          <button type="button" class="btn-detail" data-program="<?= e($p->getId()) ?>">Lihat Detail</button>
+-        </article>
+-      <?php endforeach; ?>
+-
+-      <div id="detail-program" class="detail" hidden>
+-        <button type="button" class="detail-tutup" aria-label="Tutup detail">&times;</button>
+-        <h3 id="detail-judul"></h3>
+-        <p id="detail-deskripsi"></p>
+-        <progress id="detail-progress" max="100" value="0"></progress>
+-        <p id="detail-dana"></p>
+-        <button type="button" id="detail-donasi">Donasi untuk program ini</button>
+-      </div>
+-    </section>
+-
+-    <section id="statistik">
+-      <h2>Statistik Capaian Donasi</h2>
+-      <?php foreach ($statistik as $s): ?>
+-        <div class="stat">
+-          <p class="stat-angka"><?= e($s['angka']) ?></p>
+-          <p class="stat-label"><?= e($s['label']) ?></p>
+-        </div>
+-      <?php endforeach; ?>
+-    </section>
+-
+-    <!-- Week 4: data dari API (api/programs.php) lewat fetch -->
+-    <section id="api-programs" aria-live="polite">
+-      <h2>Data API Program Kemanusiaan</h2>
+-      <div class="api-status api-loading" id="api-status">Mengambil data program...</div>
+-      <div class="api-actions">
+-        <button type="button" class="btn btn-api" id="refresh-api">Refresh Data</button>
+-      </div>
+-      <div class="api-list" id="api-program-list"></div>
+-    </section>
+-
+-    <section id="agenda">
+-      <h2>Agenda &amp; Laporan Penyaluran</h2>
+-      <?php if (empty($agenda)): ?>
+-        <p>Belum ada agenda penyaluran.</p>
+-      <?php else: ?>
+-        <?php foreach ($agenda as $a): ?>
+-          <article>
+-            <img src="images/<?= e($a['gambar']) ?>.svg" alt="<?= e($a['alt']) ?>" width="320" height="180" loading="lazy">
+-            <div>
+-              <time datetime="<?= e($a['tanggal']) ?>"><?= e(tanggal_indonesia($a['tanggal'])) ?></time>
+-              <h3><?= e($a['judul']) ?></h3>
+-              <p><?= e($a['isi']) ?></p>
+-            </div>
+-          </article>
+-        <?php endforeach; ?>
+-      <?php endif; ?>
+-    </section>
+-
+-    <section id="donasi">
+-      <h2>Formulir Donasi Kemanusiaan</h2>
+-      <form action="#" method="post" enctype="multipart/form-data">
+-        <div>
+-          <label for="nama">Nama Donatur:</label>
+-          <input type="text" id="nama" name="nama" placeholder="Isi 'Hamba Allah' jika anonim">
+-        </div>
+-        <div>
+-          <label for="program">Pilih Program Bantuan:</label>
+-          <select id="program" name="program">
+-            <?php foreach ($programs as $p): ?>
+-              <option value="<?= e($p->getId()) ?>"><?= e($p->getTitle()) ?></option>
+-            <?php endforeach; ?>
+-          </select>
+-        </div>
+-        <div>
+-          <label for="nominal">Nominal Donasi (Rp):</label>
+-          <input type="number" id="nominal" name="nominal" min="1000" step="1000" placeholder="Contoh: 100000" required>
+-        </div>
+-        <div>
+-          <label for="doa">Doa &amp; Pesan Kebaikan:</label>
+-          <textarea id="doa" name="doa" rows="3" placeholder="Tuliskan doa untuk warga Palestina..."></textarea>
+-        </div>
+-        <div>
+-          <label for="bukti">Unggah Bukti Transfer:</label>
+-          <input type="file" id="bukti" name="bukti" accept="image/*">
+-        </div>
+-        <button type="submit">Kirim Donasi</button>
+-      </form>
+-    </section>
+-  </main>
+-
+-  <footer>
+-    <p>&copy; <?= date('Y') ?> <?= e($profil['nama']) ?> - Lembaga Penggalangan Dana Kemanusiaan Terpercaya</p>
+-  </footer>
+-
+-  <!-- Data dari PHP diteruskan ke JavaScript (panel detail) -->
+-  <script>
+-    const dataProgram = <?= json_encode($programs_by_id, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+-  </script>
+-</body>
+-</html>
+\ No newline at end of file
++/* =========================================================
++   index.php - pintu masuk aplikasi (front controller)
++   Hanya menerima request dan meneruskannya ke Controller.
++     index.php                       -> LembagaController::index()
++     index.php?aksi=show&id=medis    -> LembagaController::show('medis')
++     POST index.php?aksi=process     -> LembagaController::process()
++   ========================================================= */
++require __DIR__ . '/Controller/LembagaController.php';
++
++$controller = new LembagaController();
++$aksi = $_GET['aksi'] ?? 'index';
++
++if ($aksi === 'process' && $_SERVER['REQUEST_METHOD'] === 'POST') {
++    $controller->process();
++} elseif ($aksi === 'show') {
++    $controller->show((string) ($_GET['id'] ?? ''));
++} else {
++    $controller->index();
++}
+diff --git a/TASK 3/script.js b/TASK 3/script.js
+index ef92736..08abfea 100644
+--- a/TASK 3/script.js	
++++ b/TASK 3/script.js	
+@@ -113,7 +113,7 @@ if (refreshButton) {
+   refreshButton.addEventListener('click', loadApiPrograms);
+ }
+ 
+-loadApiPrograms();
++if (apiList) loadApiPrograms();
+ 
+ /* ===== Panel Detail Program (data dari PHP lewat variabel dataProgram) ===== */
+ const panel = document.querySelector('#detail-program');
+diff --git a/TASK 3/style.css b/TASK 3/style.css
+index 55e2308..03e6498 100644
+--- a/TASK 3/style.css	
++++ b/TASK 3/style.css	
+@@ -534,3 +534,11 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
+ .badge-mendesak { background: #fff1f2; color: #b91c1c; }
+ .kartu-status { padding: 1rem 1.25rem 0; }
+ .kartu-status + h3 { padding-top: 0.6rem; }
++
++/* ===== Week 7: halaman detail program (View/program-detail.php) ===== */
++.halaman-detail { max-width: 720px; margin-inline: auto; }
++.halaman-detail img { width: 100%; height: auto; border-radius: var(--radius); margin-bottom: 1rem; }
++.halaman-detail h1 { margin-top: 0.75rem; color: var(--hijau); }
++.halaman-detail progress { width: 100%; height: 14px; accent-color: var(--hijau); }
++.btn-halaman { margin-top: 0; }
++#hasil-donasi ul { margin: 0.5rem 0 0; padding-left: 1.2rem; font-weight: 400; }

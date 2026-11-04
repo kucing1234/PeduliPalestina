@@ -1,0 +1,26 @@
+[
+  {
+    "id": "medis",
+    "title": "Bantuan Medis & Ambulans Darurat",
+    "description": "Penyediaan obat-obatan esensial, kasa steril, dan operasional tim medis darurat di lapangan.",
+    "target": 500000000,
+    "terkumpul": 320000000,
+    "category": "Kesehatan"
+  },
+  {
+    "id": "pangan",
+    "title": "Dapur Umum & Paket Pangan",
+    "description": "Distribusi ribuan porsi makanan hangat dan bahan pokok gandum untuk keluarga di pengungsian.",
+    "target": 400000000,
+    "terkumpul": 280000000,
+    "category": "Pangan"
+  },
+  {
+    "id": "air",
+    "title": "Truk Air Bersih & Sanitasi",
+    "description": "Pasokan air layak minum dan penyediaan fasilitas sanitasi darurat untuk mencegah penyakit.",
+    "target": 300000000,
+    "terkumpul": 250000000,
+    "category": "Air & Sanitasi"
+  }
+]
